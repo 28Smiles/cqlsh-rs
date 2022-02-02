@@ -3,9 +3,6 @@ name: Main
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
 env:
   CARGO_TERM_COLOR: always
 
@@ -35,10 +32,14 @@ jobs:
       run: upx -9 -o staging/cqlsh target/x86_64-apple-darwin/release/cqlsh; cd staging; zip cqlsh-macos.zip cqlsh; tar -cvzf cqlsh-macos.tar.gz cqlsh; rm cqlsh
     - uses: marvinpinto/action-automatic-releases@latest
       with:
+        title: "Development Build"
         automatic_release_tag: latest
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: true
-        files: staging/*
+        files: |
+          staging/*
+          LICENCE
+          README.md
     - uses: actions/upload-artifact@v2
       with:
         name: package
