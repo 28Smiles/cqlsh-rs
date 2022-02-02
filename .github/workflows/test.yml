@@ -1,0 +1,37 @@
+name: Main
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install targets
+      run: sudo apt-get install -y mingw-w64; rustup target add x86_64-pc-windows-gnu; rustup target add x86_64-unknown-linux-gnu
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Build Linux
+      run: cargo build --target x86_64-unknown-linux-gnu --verbose --release
+    - name: Create Linux artifacts
+      run: mkdir staging; upx -9 -o staging/cqlsh target/x86_64-unknown-linux-gnu/release/cqlsh; cd staging; zip cqlsh-linux.zip cqlsh; tar -cvzf cqlsh-linux.tar.gz cqlsh; rm cqlsh
+    - name: Build Windows
+      run: cargo build --target x86_64-pc-windows-gnu --verbose --release
+    - name: Create Windows artifacts
+      run: upx -9 -o staging/cqlsh.exe target/x86_64-pc-windows-gnu/release/cqlsh.exe; cd staging; zip cqlsh-windows.zip cqlsh.exe; tar -cvzf cqlsh-windows.tar.gz cqlsh.exe; rm cqlsh.exe
+    - name: Build-musl macOS x86
+      uses: Shogan/rust-musl-action@v1.0.2
+      with:
+        args:
+          cargo build --target x86_64-apple-darwin --verbose --release
+    - name: Create MacOS artifacts
+      run: upx -9 -o staging/cqlsh target/x86_64-apple-darwin/release/cqlsh; cd staging; zip cqlsh-macos.zip cqlsh; tar -cvzf cqlsh-macos.tar.gz cqlsh; rm cqlsh
+    - uses: actions/upload-artifact@v2
+      with:
+        name: package
+        path: staging
