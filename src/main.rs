@@ -7,20 +7,23 @@ use std::time::Duration;
 
 
 #[derive(Parser, Debug)]
+#[clap(about = "I am a cqlsh alternative, just pass `-h`")]
 struct Cli {
     host: String,
-    query: Option<String>,
 
-    #[clap(long, short)]
+    #[clap(long, short, help = "Execute the given statement, then exit")]
+    execute: Option<String>,
+
+    #[clap(long, short, help = "Username to authenticate against Cassandra with")]
     user: Option<String>,
 
-    #[clap(long, short)]
+    #[clap(long, short, help = "Password to authenticate against Cassandra with, should be used in conjunction with --user")]
     password: Option<String>,
 
-    #[clap(long, short)]
+    #[clap(long, short, help = "Keyspace to authenticate to")]
     keyspace: Option<String>,
 
-    #[clap(long, default_value = "2000")]
+    #[clap(long, default_value = "2000", help = "Specify the connection timeout in seconds (defaults to 2s)")]
     connect_timeout: u64
 }
 
@@ -375,9 +378,9 @@ async fn main() -> Result<(), Error> {
     let session: Session = session_builder.build().await
         .expect("could not connect to database");
 
-    if let Some(query) = &args.query {
-        for query in query.split(";") {
-            execute_query(&session, query).await;
+    if let Some(execute) = &args.execute {
+        for execute in execute.split(";") {
+            execute_query(&session, execute).await;
         }
     } else {
         // Interactive Shell mode
