@@ -380,7 +380,9 @@ async fn main() -> Result<(), Error> {
 
     if let Some(execute) = &args.execute {
         for execute in execute.split(";") {
-            execute_query(&session, execute).await;
+            if !execute.is_empty() && execute.len() > 1 {
+                execute_query(&session, execute).await;
+            }
         }
     } else {
         // Interactive Shell mode
