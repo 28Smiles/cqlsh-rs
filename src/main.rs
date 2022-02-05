@@ -1,8 +1,8 @@
+use std::borrow::Cow;
 use clap::{ErrorKind, IntoApp, Parser};
 use scylla::{Session, SessionBuilder};
 use std::io::{Error, Write};
 use scylla::frame::response::result::CqlValue;
-use std::net::IpAddr;
 use std::time::Duration;
 
 
@@ -27,60 +27,53 @@ struct Cli {
     connect_timeout: u64
 }
 
-fn fmt_col(col: &CqlValue) -> String {
+fn fmt_col(col: &CqlValue) -> Cow<str> {
     match col {
         CqlValue::Ascii(col) => {
-            col.clone()
+            Cow::Borrowed(col)
         }
         CqlValue::Boolean(col) => {
-            if *col {
-                String::from("true")
+            Cow::Borrowed(if *col {
+                "true"
             } else {
-                String::from("false")
-            }
+                "false"
+            })
         }
         CqlValue::Blob(_) => {
-            String::from("<blob>")
+            Cow::Borrowed("<blob>")
         }
         CqlValue::Counter(col) => {
-            format!("{}", col.0)
+            Cow::Owned(col.0.to_string())
         }
         CqlValue::Decimal(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Date(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Double(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Empty => {
-            String::new()
+            Cow::Borrowed("")
         }
         CqlValue::Float(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Int(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::BigInt(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Text(col) => {
-            col.clone()
+            Cow::Borrowed(col)
         }
         CqlValue::Timestamp(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Inet(col) => {
-            match col {
-                IpAddr::V4(col) => {
-                    format!("{}", col)
-                }
-                IpAddr::V6(col) => {
-                    format!("{}", col)
-                }
-            }
+            Cow::Owned(col.to_string())
         }
         CqlValue::List(col) => {
             let mut out = String::new();
@@ -100,7 +93,7 @@ fn fmt_col(col: &CqlValue) -> String {
                         fmt_col(value)
                     }
                     _ => {
-                        format!("'{}'", fmt_col(value))
+                        Cow::Owned(format!("'{}'", fmt_col(value)))
                     }
                 });
                 if value != col.last().unwrap() {
@@ -109,7 +102,7 @@ fn fmt_col(col: &CqlValue) -> String {
             }
             out.push('}');
 
-            out
+            Cow::Owned(out)
         }
         CqlValue::Map(col) => {
             let mut out = String::new();
@@ -129,7 +122,7 @@ fn fmt_col(col: &CqlValue) -> String {
                         fmt_col(key)
                     }
                     _ => {
-                        format!("'{}'", fmt_col(key))
+                        Cow::Owned(format!("'{}'", fmt_col(key)))
                     }
                 }, match value {
                     CqlValue::List(_) => {
@@ -145,7 +138,7 @@ fn fmt_col(col: &CqlValue) -> String {
                         fmt_col(value)
                     }
                     _ => {
-                        format!("'{}'", fmt_col(value))
+                        Cow::Owned(format!("'{}'", fmt_col(value)))
                     }
                 }));
                 if value != &col.last().unwrap().0 {
@@ -154,7 +147,7 @@ fn fmt_col(col: &CqlValue) -> String {
             }
             out.push('}');
 
-            out
+            Cow::Owned(out)
         }
         CqlValue::Set(col) => {
             let mut out = String::new();
@@ -174,7 +167,7 @@ fn fmt_col(col: &CqlValue) -> String {
                         fmt_col(value)
                     }
                     _ => {
-                        format!("'{}'", fmt_col(value))
+                        Cow::Owned(format!("'{}'", fmt_col(value)))
                     }
                 });
                 if value != col.last().unwrap() {
@@ -183,7 +176,7 @@ fn fmt_col(col: &CqlValue) -> String {
             }
             out.push('}');
 
-            out
+            Cow::Owned(out)
         }
         CqlValue::UserDefinedType { fields, .. } => {
             let mut out = String::new();
@@ -219,19 +212,19 @@ fn fmt_col(col: &CqlValue) -> String {
             }
             out.push('}');
 
-            out
+            Cow::Owned(out)
         }
         CqlValue::SmallInt(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::TinyInt(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Time(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Timeuuid(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Tuple(col) => {
             let mut out = String::new();
@@ -253,12 +246,12 @@ fn fmt_col(col: &CqlValue) -> String {
                                 fmt_col(value)
                             }
                             _ => {
-                                format!("'{}'", fmt_col(value))
+                                Cow::Owned(format!("'{}'", fmt_col(value)))
                             }
                         }
                     }
                     None => {
-                        String::from("null")
+                        Cow::Owned(String::from("null"))
                     }
                 });
                 let last = col.last().unwrap();
@@ -268,13 +261,13 @@ fn fmt_col(col: &CqlValue) -> String {
             }
             out.push('}');
 
-            out
+            Cow::Owned(out)
         }
         CqlValue::Uuid(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
         CqlValue::Varint(col) => {
-            format!("{}", col)
+            Cow::Owned(col.to_string())
         }
     }
 }
