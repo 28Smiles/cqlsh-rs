@@ -79,23 +79,25 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
             let mut out = String::new();
             out.push('{');
             for value in col {
-                out.push_str(&*match value {
+                match value {
                     CqlValue::List(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::Map(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::Set(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::UserDefinedType{..} => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     _ => {
-                        Cow::Owned(format!("'{}'", fmt_col(value)))
+                        out.push('\'');
+                        out.push_str(&fmt_col(value));
+                        out.push('\'');
                     }
-                });
+                };
                 if value != col.last().unwrap() {
                     out.push_str(", ");
                 }
@@ -108,39 +110,46 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
             let mut out = String::new();
             out.push('{');
             for (key, value) in col {
-                out.push_str(&*format!("{}: {}", match key {
+                match key {
                     CqlValue::List(_) => {
-                        fmt_col(key)
+                        out.push_str(&fmt_col(key))
                     }
                     CqlValue::Map(_) => {
-                        fmt_col(key)
+                        out.push_str(&fmt_col(key))
                     }
                     CqlValue::Set(_) => {
-                        fmt_col(key)
+                        out.push_str(&fmt_col(key))
                     }
                     CqlValue::UserDefinedType{..} => {
-                        fmt_col(key)
+                        out.push_str(&fmt_col(key))
                     }
                     _ => {
-                        Cow::Owned(format!("'{}'", fmt_col(key)))
+                        out.push('\'');
+                        out.push_str(&fmt_col(key));
+                        out.push('\'');
                     }
-                }, match value {
+                };
+                out.push(':');
+                out.push(' ');
+                match value {
                     CqlValue::List(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::Map(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::Set(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::UserDefinedType{..} => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     _ => {
-                        Cow::Owned(format!("'{}'", fmt_col(value)))
+                        out.push('\'');
+                        out.push_str(&fmt_col(value));
+                        out.push('\'');
                     }
-                }));
+                };
                 if value != &col.last().unwrap().0 {
                     out.push_str(", ");
                 }
@@ -153,23 +162,25 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
             let mut out = String::new();
             out.push('{');
             for value in col {
-                out.push_str(&*match value {
+                match value {
                     CqlValue::List(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::Map(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::Set(_) => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     CqlValue::UserDefinedType{..} => {
-                        fmt_col(value)
+                        out.push_str(&fmt_col(value))
                     }
                     _ => {
-                        Cow::Owned(format!("'{}'", fmt_col(value)))
+                        out.push('\'');
+                        out.push_str(&fmt_col(value));
+                        out.push('\'');
                     }
-                });
+                };
                 if value != col.last().unwrap() {
                     out.push_str(", ");
                 }
@@ -182,30 +193,35 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
             let mut out = String::new();
             out.push('{');
             for (key, value) in fields {
-                out.push_str(&*match value {
+                out.push_str(key);
+                out.push(':');
+                out.push(' ');
+                match value {
                     Some(value) => {
                         match value {
                             CqlValue::List(_) => {
-                                format!("{}: {}", key, fmt_col(value))
+                                out.push_str(&fmt_col(value))
                             }
                             CqlValue::Map(_) => {
-                                format!("{}: {}", key, fmt_col(value))
+                                out.push_str(&fmt_col(value))
                             }
                             CqlValue::Set(_) => {
-                                format!("{}: {}", key, fmt_col(value))
+                                out.push_str(&fmt_col(value))
                             }
                             CqlValue::UserDefinedType{..} => {
-                                format!("{}: {}", key, fmt_col(value))
+                                out.push_str(&fmt_col(value))
                             }
                             _ => {
-                                format!("{}: '{}'", key, fmt_col(value))
+                                out.push('\'');
+                                out.push_str(&fmt_col(value));
+                                out.push('\'');
                             }
-                        }
+                        };
                     }
                     None => {
-                        format!("{}: null", key)
+                        out.push_str("null");
                     }
-                });
+                };
                 if key != &fields.last().unwrap().0 {
                     out.push_str(", ");
                 }
@@ -230,30 +246,32 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
             let mut out = String::new();
             out.push('{');
             for value in col {
-                out.push_str(&*match value {
+                match value {
                     Some(value) => {
                         match value {
                             CqlValue::List(_) => {
-                                fmt_col(value)
+                                out.push_str(&fmt_col(value))
                             }
                             CqlValue::Map(_) => {
-                                fmt_col(value)
+                                out.push_str(&fmt_col(value))
                             }
                             CqlValue::Set(_) => {
-                                fmt_col(value)
+                                out.push_str(&fmt_col(value))
                             }
                             CqlValue::UserDefinedType{..} => {
-                                fmt_col(value)
+                                out.push_str(&fmt_col(value))
                             }
                             _ => {
-                                Cow::Owned(format!("'{}'", fmt_col(value)))
+                                out.push('\'');
+                                out.push_str(&fmt_col(value));
+                                out.push('\'');
                             }
-                        }
+                        };
                     }
                     None => {
-                        Cow::Owned(String::from("null"))
+                        out.push_str("null");
                     }
-                });
+                };
                 let last = col.last().unwrap();
                 if value.is_none() && last.is_none() || value.as_ref().unwrap() == last.as_ref().unwrap()  {
                     out.push_str(", ");
