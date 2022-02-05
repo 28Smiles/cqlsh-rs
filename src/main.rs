@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fs;
 use clap::{ErrorKind, IntoApp, Parser};
 use scylla::{Session, SessionBuilder};
 use std::io::{Error, Write};
@@ -13,6 +14,9 @@ struct Cli {
 
     #[clap(long, short, help = "Execute the given statement, then exit")]
     execute: Option<String>,
+
+    #[clap(long, short, help = "Execute commands from the given file, then exit")]
+    file: Option<String>,
 
     #[clap(long, short, help = "Username to authenticate against Cassandra with")]
     user: Option<String>,
@@ -375,6 +379,13 @@ async fn main() -> Result<(), Error> {
             "You need to specify username AND password",
         ).exit();
     }
+    if args.execute.is_some() && args.file.is_some() {
+        let mut app = Cli::into_app();
+        app.error(
+            ErrorKind::ArgumentConflict,
+            "You can not provide a file and a command to execute, please provide -f OR -e",
+        ).exit();
+    }
 
     let mut session_builder = SessionBuilder::new();
     session_builder = session_builder.known_node(args.host);
@@ -389,30 +400,41 @@ async fn main() -> Result<(), Error> {
     let session: Session = session_builder.build().await
         .expect("could not connect to database");
 
-    if let Some(execute) = &args.execute {
-        for execute in execute.split(";") {
+    if let Some(file_path) = &args.file {
+        let file_content = fs::read_to_string(file_path)
+            .expect("Could not read file");
+        for execute in file_content.replace("\n", "").split(";") {
             if !execute.is_empty() && execute.len() > 1 {
+                println!("cqlsh> {};", execute);
                 execute_query(&session, execute).await;
             }
         }
     } else {
-        // Interactive Shell mode
-        let mut query = String::new();
-        print!("cqlsh> ");
-        loop {
-            std::io::stdout().flush().expect("flush failed!");
-            let input: String = text_io::read!("{}\n");
-            query.push_str(&input);
-            if input == "exit" {
-                break;
+        if let Some(execute) = &args.execute {
+            for execute in execute.split(";") {
+                if !execute.is_empty() && execute.len() > 1 {
+                    execute_query(&session, execute).await;
+                }
             }
-            if input.ends_with(";") {
-                execute_query(&session, &query).await;
-                query = String::new();
-                print!("cqlsh> ");
-            } else {
-                query.push(' ');
-                print!("   ... ");
+        } else {
+            // Interactive Shell mode
+            let mut query = String::new();
+            print!("cqlsh> ");
+            loop {
+                std::io::stdout().flush().expect("flush failed!");
+                let input: String = text_io::read!("{}\n");
+                query.push_str(&input);
+                if input == "exit" {
+                    break;
+                }
+                if input.ends_with(";") {
+                    execute_query(&session, &query).await;
+                    query = String::new();
+                    print!("cqlsh> ");
+                } else {
+                    query.push(' ');
+                    print!("   ... ");
+                }
             }
         }
     }
