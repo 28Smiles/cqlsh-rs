@@ -34,7 +34,7 @@ struct Cli {
 
 fn fmt_col(col: &CqlValue) -> Cow<str> {
     match col {
-        CqlValue::Ascii(col) => {
+        CqlValue::Ascii(col) | CqlValue::Text(col) => {
             Cow::Borrowed(col)
         }
         CqlValue::Boolean(col) => {
@@ -71,45 +71,11 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
         CqlValue::BigInt(col) => {
             Cow::Owned(col.to_string())
         }
-        CqlValue::Text(col) => {
-            Cow::Borrowed(col)
-        }
         CqlValue::Timestamp(col) => {
             Cow::Owned(col.to_string())
         }
         CqlValue::Inet(col) => {
             Cow::Owned(col.to_string())
-        }
-        CqlValue::List(col) => {
-            let mut out = String::new();
-            out.push('{');
-            for value in col {
-                match value {
-                    CqlValue::List(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::Map(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::Set(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::UserDefinedType{..} => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    _ => {
-                        out.push('\'');
-                        out.push_str(&fmt_col(value));
-                        out.push('\'');
-                    }
-                };
-                if value != col.last().unwrap() {
-                    out.push_str(", ");
-                }
-            }
-            out.push('}');
-
-            Cow::Owned(out)
         }
         CqlValue::Map(col) => {
             let mut out = String::new();
@@ -163,7 +129,7 @@ fn fmt_col(col: &CqlValue) -> Cow<str> {
 
             Cow::Owned(out)
         }
-        CqlValue::Set(col) => {
+        CqlValue::Set(col) | CqlValue::List(col) => {
             let mut out = String::new();
             out.push('{');
             for value in col {
