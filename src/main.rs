@@ -10,6 +10,7 @@ use std::time::Duration;
 #[derive(Parser, Debug)]
 #[clap(about = "I am a cqlsh alternative, just pass `-h`")]
 struct Cli {
+    #[clap(default_value = "127.0.0.1:9042")]
     host: String,
 
     #[clap(long, short, help = "Execute the given statement, then exit")]
@@ -369,6 +370,22 @@ async fn execute_query(session: &Session, query: &str) {
     }
 }
 
+async fn session_information(args: &Cli, session: &Session) {
+    let result = session.query("SELECT cluster_name, cql_version, release_version FROM system.local", &[]).await
+        .expect("could not connect to database");
+    let rows = result.rows.as_ref().unwrap();
+    let row = rows.get(0).unwrap();
+    let cols = &row.columns;
+    let cluster_name = cols.get(0).unwrap().as_ref().unwrap();
+    let cql_version = cols.get(1).unwrap().as_ref().unwrap();
+    let release_version = cols.get(2).unwrap().as_ref().unwrap();
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+    println!("Connected to {} at {}.", fmt_col(cluster_name), &args.host);
+    println!("[ cqlsh-rs {} | Cassandra {} | CQL spec {} | Native protocol v4 ]",
+             VERSION, fmt_col(release_version), fmt_col(cql_version))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
@@ -388,17 +405,18 @@ async fn main() -> Result<(), Error> {
     }
 
     let mut session_builder = SessionBuilder::new();
-    session_builder = session_builder.known_node(args.host);
+    session_builder = session_builder.known_node(&args.host);
     if args.user.is_some() && args.password.is_some() {
-        session_builder = session_builder.user(args.user.unwrap(), args.password.unwrap());
+        session_builder = session_builder.user(args.user.as_ref().unwrap(), args.password.as_ref().unwrap());
     }
     if args.keyspace.is_some() {
-        session_builder = session_builder.use_keyspace(args.keyspace.unwrap(), false);
+        session_builder = session_builder.use_keyspace(args.keyspace.as_ref().unwrap(), false);
     }
     session_builder = session_builder.connection_timeout(Duration::from_millis(args.connect_timeout));
 
     let session: Session = session_builder.build().await
         .expect("could not connect to database");
+    session_information(&args, &session).await;
 
     if let Some(file_path) = &args.file {
         let file_content = fs::read_to_string(file_path)
