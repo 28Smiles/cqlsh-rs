@@ -6,7 +6,7 @@ cqlsh-rs is a command-line interface for interacting with Cassandra using CQL (t
 
 Usage:
 
-cqlsh [options] [host [port]]
+`cqlsh [options] [host [port]]`
 
 Options:
 
