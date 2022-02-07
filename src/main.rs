@@ -1,9 +1,9 @@
-use std::borrow::Cow;
+mod fmt;
+
 use std::fs;
 use clap::{ErrorKind, IntoApp, Parser};
 use scylla::{Session, SessionBuilder};
 use std::io::{Error, Write};
-use scylla::frame::response::result::CqlValue;
 use std::time::Duration;
 
 
@@ -32,235 +32,6 @@ struct Cli {
     connect_timeout: u64
 }
 
-fn fmt_col(col: &CqlValue) -> Cow<str> {
-    match col {
-        CqlValue::Ascii(col) | CqlValue::Text(col) => {
-            Cow::Borrowed(col)
-        }
-        CqlValue::Boolean(col) => {
-            Cow::Borrowed(if *col {
-                "true"
-            } else {
-                "false"
-            })
-        }
-        CqlValue::Blob(_) => {
-            Cow::Borrowed("<blob>")
-        }
-        CqlValue::Counter(col) => {
-            Cow::Owned(col.0.to_string())
-        }
-        CqlValue::Decimal(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Date(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Double(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Empty => {
-            Cow::Borrowed("")
-        }
-        CqlValue::Float(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Int(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::BigInt(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Timestamp(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Inet(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Map(col) => {
-            let mut out = String::new();
-            out.push('{');
-            for (key, value) in col {
-                match key {
-                    CqlValue::List(_) => {
-                        out.push_str(&fmt_col(key))
-                    }
-                    CqlValue::Map(_) => {
-                        out.push_str(&fmt_col(key))
-                    }
-                    CqlValue::Set(_) => {
-                        out.push_str(&fmt_col(key))
-                    }
-                    CqlValue::UserDefinedType{..} => {
-                        out.push_str(&fmt_col(key))
-                    }
-                    _ => {
-                        out.push('\'');
-                        out.push_str(&fmt_col(key));
-                        out.push('\'');
-                    }
-                };
-                out.push(':');
-                out.push(' ');
-                match value {
-                    CqlValue::List(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::Map(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::Set(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::UserDefinedType{..} => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    _ => {
-                        out.push('\'');
-                        out.push_str(&fmt_col(value));
-                        out.push('\'');
-                    }
-                };
-                if value != &col.last().unwrap().0 {
-                    out.push_str(", ");
-                }
-            }
-            out.push('}');
-
-            Cow::Owned(out)
-        }
-        CqlValue::Set(col) | CqlValue::List(col) => {
-            let mut out = String::new();
-            out.push('{');
-            for value in col {
-                match value {
-                    CqlValue::List(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::Map(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::Set(_) => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    CqlValue::UserDefinedType{..} => {
-                        out.push_str(&fmt_col(value))
-                    }
-                    _ => {
-                        out.push('\'');
-                        out.push_str(&fmt_col(value));
-                        out.push('\'');
-                    }
-                };
-                if value != col.last().unwrap() {
-                    out.push_str(", ");
-                }
-            }
-            out.push('}');
-
-            Cow::Owned(out)
-        }
-        CqlValue::UserDefinedType { fields, .. } => {
-            let mut out = String::new();
-            out.push('{');
-            for (key, value) in fields {
-                out.push_str(key);
-                out.push(':');
-                out.push(' ');
-                match value {
-                    Some(value) => {
-                        match value {
-                            CqlValue::List(_) => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            CqlValue::Map(_) => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            CqlValue::Set(_) => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            CqlValue::UserDefinedType{..} => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            _ => {
-                                out.push('\'');
-                                out.push_str(&fmt_col(value));
-                                out.push('\'');
-                            }
-                        };
-                    }
-                    None => {
-                        out.push_str("null");
-                    }
-                };
-                if key != &fields.last().unwrap().0 {
-                    out.push_str(", ");
-                }
-            }
-            out.push('}');
-
-            Cow::Owned(out)
-        }
-        CqlValue::SmallInt(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::TinyInt(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Time(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Timeuuid(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Tuple(col) => {
-            let mut out = String::new();
-            out.push('{');
-            for value in col {
-                match value {
-                    Some(value) => {
-                        match value {
-                            CqlValue::List(_) => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            CqlValue::Map(_) => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            CqlValue::Set(_) => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            CqlValue::UserDefinedType{..} => {
-                                out.push_str(&fmt_col(value))
-                            }
-                            _ => {
-                                out.push('\'');
-                                out.push_str(&fmt_col(value));
-                                out.push('\'');
-                            }
-                        };
-                    }
-                    None => {
-                        out.push_str("null");
-                    }
-                };
-                let last = col.last().unwrap();
-                if value.is_none() && last.is_none() || value.as_ref().unwrap() == last.as_ref().unwrap()  {
-                    out.push_str(", ");
-                }
-            }
-            out.push('}');
-
-            Cow::Owned(out)
-        }
-        CqlValue::Uuid(col) => {
-            Cow::Owned(col.to_string())
-        }
-        CqlValue::Varint(col) => {
-            Cow::Owned(col.to_string())
-        }
-    }
-}
-
 async fn execute_query(session: &Session, query: &str) {
     match session.query(query, &[]).await {
         Ok(query_result) => {
@@ -274,16 +45,10 @@ async fn execute_query(session: &Session, query: &str) {
             if rows.len() > 0 {
                 for col_spec in rows {
                     for (col, w) in col_spec.columns.iter().zip(width.iter_mut()) {
-                        if let Some(col) = col {
-                            let s = fmt_col(col);
-                            let l = s.chars().count();
-                            if l > *w {
-                                *w = l;
-                            }
-                        } else {
-                            if 4 > *w {
-                                *w = 4;
-                            }
+                        let s = fmt::fmt_opt(col);
+                        let l = s.chars().count();
+                        if l > *w {
+                            *w = l;
                         }
                     }
                 }
@@ -307,7 +72,7 @@ async fn execute_query(session: &Session, query: &str) {
                 for col_spec in rows {
                     for (col, w) in col_spec.columns.iter().zip(width.iter()) {
                         if let Some(col) = col {
-                            let s = fmt_col(col);
+                            let s = fmt::fmt(col);
                             print!("| {}", s);
                             for _ in 0..(w - s.chars().count()) {
                                 print!(" ");
@@ -347,9 +112,9 @@ async fn session_information(args: &Cli, session: &Session) {
     let release_version = cols.get(2).unwrap().as_ref().unwrap();
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    println!("Connected to {} at {}.", fmt_col(cluster_name), &args.host);
+    println!("Connected to {} at {}.", fmt::fmt(cluster_name), &args.host);
     println!("[ cqlsh-rs {} | Cassandra {} | CQL spec {} | Native protocol v4 ]",
-             VERSION, fmt_col(release_version), fmt_col(cql_version))
+             VERSION, fmt::fmt(release_version), fmt::fmt(cql_version))
 }
 
 #[tokio::main]
