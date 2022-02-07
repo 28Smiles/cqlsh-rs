@@ -169,7 +169,7 @@ async fn main() -> Result<(), Error> {
                 std::io::stdout().flush().expect("flush failed!");
                 let input: String = text_io::read!("{}\n");
                 query.push_str(&input);
-                if input == "exit" {
+                if input.to_lowercase().as_str() == "exit" {
                     break;
                 }
                 if input.ends_with(";") {
