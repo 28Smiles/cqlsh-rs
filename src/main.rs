@@ -2,9 +2,11 @@ mod fmt;
 
 use std::fs;
 use clap::{ErrorKind, IntoApp, Parser};
-use scylla::{Session, SessionBuilder};
+use scylla::{Session, SessionBuilder, QueryResult};
 use std::io::{Error, Write};
 use std::time::Duration;
+use std::borrow::Cow;
+use std::fmt::Display;
 
 
 #[derive(Parser, Debug)]
@@ -32,68 +34,62 @@ struct Cli {
     connect_timeout: u64
 }
 
+fn print_row<T: Display>(data: &Vec<T>, width: &Vec<usize>) {
+    let col_last_index = width.len() - 1;
+    for (text, (width, col)) in data.iter().zip(width.iter().cycle().zip((0..width.len()).cycle())) {
+        if col == col_last_index {
+            println!("| {:<1$} |", text, width);
+        } else {
+            print!("| {:<1$} ", text, width);
+        }
+    }
+}
+
+fn display_query_result(query_result: &QueryResult) {
+    let alt_row = Vec::new();
+    let rows = query_result.rows.as_ref().unwrap_or(&alt_row);
+
+    if rows.len() > 0 {
+        let mut width: Vec<usize> = query_result.col_specs.iter()
+            .map(|spec| spec.name.chars().count()).collect();
+        let table_head: Vec<&String> = query_result.col_specs.iter()
+            .map(|spec| { &spec.name }).collect();
+        let mut table: Vec<Cow<str>> = Vec::new();
+
+        // Generate Table
+        for col_spec in rows {
+            for (col, w) in col_spec.columns.iter().zip(width.iter_mut()) {
+                let s = fmt::fmt_opt(col);
+                let l = s.chars().count();
+                if l > *w {
+                    *w = l;
+                }
+                table.push(s);
+            }
+        }
+
+        // Print Table
+        println!();
+        print_row(&table_head, &width);
+        let col_last_index = width.len() - 1;
+        for (width, col) in width.iter().zip((0..width.len()).cycle()) {
+            if col == col_last_index {
+                println!("+-{:-^1$}-+", "-", width);
+            } else {
+                print!("+-{:-^1$}-", "-", width);
+            }
+        }
+        print_row(&table, &width);
+        println!();
+    } else {
+        println!("\nEmpty Result Set\n");
+    }
+}
+
 async fn execute_query(session: &Session, query: &str) {
     match session.query(query, &[]).await {
         Ok(query_result) => {
-            let mut width: Vec<usize> = query_result.col_specs.iter()
-                .map(|spec| spec.name.chars().count()).collect();
-
-            let col_specs = &query_result.col_specs;
-            let alt_row = Vec::new();
-            let rows = query_result.rows.as_ref().unwrap_or(&alt_row);
-
-            if rows.len() > 0 {
-                for col_spec in rows {
-                    for (col, w) in col_spec.columns.iter().zip(width.iter_mut()) {
-                        let s = fmt::fmt_opt(col);
-                        let l = s.chars().count();
-                        if l > *w {
-                            *w = l;
-                        }
-                    }
-                }
-                println!();
-                for (col_spec, w) in col_specs.iter().zip(width.iter()) {
-                    print!("| {}", col_spec.name);
-                    for _ in 0..(w - col_spec.name.chars().count()) {
-                        print!(" ");
-                    }
-                    print!(" ");
-                }
-                print!(" |\n");
-                for (_, w) in col_specs.iter().zip(width.iter()) {
-                    print!("+-");
-                    for _ in 0..*w {
-                        print!("-");
-                    }
-                    print!("-");
-                }
-                print!("-+\n");
-                for col_spec in rows {
-                    for (col, w) in col_spec.columns.iter().zip(width.iter()) {
-                        if let Some(col) = col {
-                            let s = fmt::fmt(col);
-                            print!("| {}", s);
-                            for _ in 0..(w - s.chars().count()) {
-                                print!(" ");
-                            }
-                            print!(" ");
-                        } else {
-                            print!("| null");
-                            for _ in 0..(w - 4) {
-                                print!(" ");
-                            }
-                            print!(" ");
-                        }
-                    }
-                    print!(" |\n");
-                }
-                println!();
-            } else {
-                println!();
-                println!("Empty Result Set");
-                println!();
-            }
+            display_query_result(&query_result)
         }
         Err(err) => {
             println!("\n{}\n", err);
