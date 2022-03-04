@@ -117,14 +117,14 @@ async fn session_information(args: &Cli, session: &Session) {
 async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     if args.user.is_some() && args.password.is_none() || args.user.is_none() && args.password.is_some() {
-        let mut app = Cli::into_app();
+        let mut app = Cli::command();
         app.error(
             ErrorKind::ArgumentConflict,
             "You need to specify username AND password",
         ).exit();
     }
     if args.execute.is_some() && args.file.is_some() {
-        let mut app = Cli::into_app();
+        let mut app = Cli::command();
         app.error(
             ErrorKind::ArgumentConflict,
             "You can not provide a file and a command to execute, please provide -f OR -e",
