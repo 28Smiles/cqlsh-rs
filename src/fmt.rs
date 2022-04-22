@@ -1,5 +1,6 @@
 use scylla::frame::response::result::CqlValue;
 use std::borrow::Cow;
+use scylla::frame::value::CqlDuration;
 
 fn fmt_map<'a>(col: &'a Vec<(CqlValue, CqlValue)>, into: &'a mut String) {
     into.push('{');
@@ -91,6 +92,28 @@ pub fn fmt_opt(col: &Option<CqlValue>) -> Cow<str> {
     }
 }
 
+pub fn fmt_duration(col: &CqlDuration) -> String {
+    let mut into = String::new();
+    for (value, unit) in [
+        (col.months / 12, "y"),
+        (col.months % 12, "mo"),
+        (col.days / 7, "w"),
+        (col.days % 7, "d"),
+        ((col.nanoseconds / 3_600_000_000_000 / 12) as i32, "h"),
+        (((col.nanoseconds % 3_600_000_000_000) / 60_000_000_000) as i32, "m"),
+        (((col.nanoseconds % 60_000_000_000) / 1_000_000_000) as i32, "s"),
+        (((col.nanoseconds % 1_000_000_000) / 1_000_000) as i32, "ms"),
+        (((col.nanoseconds % 1_000_000) / 1_000) as i32, "us"),
+        ((col.nanoseconds % 1_000 / 12) as i32, "ns"),
+    ] {
+        if value > 0 {
+            into.push_str(&*format!("{}{}", value, unit));
+        }
+    }
+
+    into
+}
+
 pub fn fmt(col: &CqlValue) -> Cow<str> {
     match col {
         CqlValue::Ascii(col) | CqlValue::Text(col) => Cow::Borrowed(col),
@@ -116,6 +139,40 @@ pub fn fmt(col: &CqlValue) -> Cow<str> {
         CqlValue::Tuple(col) => Cow::Owned(apply(|s| fmt_tpl(col, s))),
         CqlValue::Uuid(col) => Cow::Owned(col.to_string()),
         CqlValue::Varint(col) => Cow::Owned(col.to_string()),
+        CqlValue::Duration(col) => Cow::Owned(fmt_duration(col))
     }
 }
 
+#[cfg(test)]
+mod test {
+    use scylla::frame::response::result::CqlValue;
+    use scylla::frame::value::CqlDuration;
+    use crate::fmt::fmt;
+
+    #[test]
+    fn test_duration() {
+        let value = CqlValue::Duration(CqlDuration {
+            months: 234,
+            days: 23,
+            nanoseconds: 2849774297494,
+        });
+
+        assert_eq!(fmt(&value), "19y6mo3w2d47m29s774ms297us41ns");
+
+        let value = CqlValue::Duration(CqlDuration {
+            months: 3,
+            days: 0,
+            nanoseconds: 3545646435,
+        });
+
+        assert_eq!(fmt(&value), "3mo3s545ms646us36ns");
+
+        let value = CqlValue::Duration(CqlDuration {
+            months: 12,
+            days: 0,
+            nanoseconds: 400000,
+        });
+
+        assert_eq!(fmt(&value), "1y400us");
+    }
+}
