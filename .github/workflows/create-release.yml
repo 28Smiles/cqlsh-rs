@@ -60,9 +60,8 @@ jobs:
         git config --global user.name "28Smiles"
         git config --global user.email "leon@camus.fun"
         git add Cargo.toml Cargo.lock
-        git commit -m "chore: Bump Version"
+        git tag "v${{ github.event.inputs.version }}" $(git commit -m "chore: Bump Version" | sed -nE 's/^\[[^ ]+\s([0-9a-f]+)\].*$/\1/p')
         git push
-        git tag "v${{ github.event.inputs.version }}"
         git push --tags
     - uses: marvinpinto/action-automatic-releases@latest
       with:
