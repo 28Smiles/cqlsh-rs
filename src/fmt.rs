@@ -9,7 +9,7 @@ fn fmt_map<'a>(col: &'a Vec<(CqlValue, CqlValue)>, into: &'a mut String) {
         into.push(':');
         into.push(' ');
         fmt_entry(value, into);
-        if value != &col.last().unwrap().0 {
+        if key != &col.last().unwrap().0 {
             into.push_str(", ");
         }
     }
