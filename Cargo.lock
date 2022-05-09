@@ -124,12 +124,13 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "4.0.2"
+version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
+checksum = "4c8858831f7781322e539ea39e72449c46b059638250c14344fec8d0aa6e539c"
 dependencies = [
  "cfg-if",
  "num_cpus",
+ "parking_lot",
 ]
 
 [[package]]
@@ -599,9 +600,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "scylla"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfdb066cb7da1771e345eff0f9578ff488e7a0999dbe89d5d593cc93a16ae5f5"
+checksum = "52f39e180cbe35480140a5e7765defec92ad9f60d6b99f154b69b0ae4acb0234"
 dependencies = [
  "arc-swap",
  "bigdecimal",
@@ -617,6 +618,7 @@ dependencies = [
  "num_enum",
  "rand",
  "scylla-macros",
+ "smallvec",
  "snap",
  "strum",
  "strum_macros",
@@ -869,9 +871,9 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "uuid"
-version = "0.8.2"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
 
 [[package]]
 name = "version_check"
