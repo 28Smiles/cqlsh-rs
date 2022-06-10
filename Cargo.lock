@@ -600,9 +600,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "scylla"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52f39e180cbe35480140a5e7765defec92ad9f60d6b99f154b69b0ae4acb0234"
+checksum = "20e5a48dbfaf99eeccd7c4b44ca36f0fcf57b69e049ca99d1a958b5184ce8d3d"
 dependencies = [
  "arc-swap",
  "bigdecimal",
