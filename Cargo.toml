@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.2", features = ["derive"] }
-scylla = "0.5"
+scylla = "0.7"
 tokio = { version = "1.19.2", features = ["full"] }
 text_io = "0.1"
 
